@@ -60,9 +60,13 @@ export default function EncuestasAdminPage() {
   const [editingPreguntaId, setEditingPreguntaId] = useState<string | null>(null);
   const [nuevaPreguntaTexto, setNuevaPreguntaTexto] = useState("");
   const [nuevaOpcionPorPregunta, setNuevaOpcionPorPregunta] = useState<Record<string, string>>({});
+  const [editingEncuestaId, setEditingEncuestaId] = useState<string | null>(null);
+  const [esModoEdicion, setEsModoEdicion] = useState(false);
+  const [activo, setActivo] = useState(true);
+  const [modoFormulario, setModoFormulario] = useState("crear"); // "crear" | "editar"
 
 
-  // Obtener encuestas
+  // Obtener todas las encuestas
   const fetchEncuestas = useCallback(async () => {
     setLoading(true);
     try {
@@ -89,6 +93,69 @@ export default function EncuestasAdminPage() {
       setLoading(false);
     }
   }, []);
+
+  // Obtener encuesta por ID (para edición)
+  const fetchEncuestaById = useCallback(async (id: string) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/encuestas/${id}`);
+      const data = response.data;
+      setNombreEntidad(data.nombreEntidad || "");
+      setTipoEntidad(data.tipoEntidad || "PRODUCTO");
+      setDescripcion(data.descripcion || "");
+      setPreguntas((data.preguntas || []).map((p: any) => ({
+        id: p.id || Math.random().toString(36).substring(2, 11),
+        texto: p.texto || "",
+        tipo: p.tipo || "ESTRELLAS",
+        obligatoria: p.obligatoria ?? true,
+        opciones: Array.isArray(p.opciones) ? p.opciones : [],
+      })));
+      setMostrarFormulario(true);
+      setEditingEncuestaId(id);
+      setEsModoEdicion(true);
+      setModoFormulario("editar");
+    } catch {
+      setError("Error al cargar encuesta para edición");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Actualizar encuesta
+  const actualizarEncuesta = useCallback(async () => {
+    if (!editingEncuestaId) return;
+    setGuardando(true);
+    try {
+      await api.put(`/encuestas/${editingEncuestaId}`, {
+        nombreEntidad,
+        tipoEntidad,
+        descripcion,
+        activo,
+        preguntas,
+      });
+      setError("");
+      // Actualizar la lista local
+      setEncuestas((prev) =>
+        prev.map((e) =>
+          e.id === editingEncuestaId
+            ? {
+                ...e,
+                nombreEntidad,
+                tipoEntidad,
+                descripcion,
+                activo,
+                preguntas,
+              }
+            : e
+        )
+      );
+      cancelarFormulario();
+    } catch (error) {
+      setError("Error al actualizar la encuesta");
+    } finally {
+      setGuardando(false);
+    }
+  }, [nombreEntidad, tipoEntidad, descripcion, activo, preguntas, editingEncuestaId, cancelarFormulario, modoFormulario]);
 
   // Validación de admin en useEffect
   useEffect(() => {
@@ -606,6 +673,13 @@ export default function EncuestasAdminPage() {
                           }}
                         >
                           📋 Ver detalles
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => fetchEncuestaById(encuesta.id)}
+                        >
+                          ✏️ Editar
                         </Button>
                         <Button
                           variant="ghost"
