@@ -121,6 +121,29 @@ export default function EncuestasAdminPage() {
     }
   }, []);
 
+  // Cancelar formulario (resetear estado)
+  const cancelarFormulario = useCallback(() => {
+    setMostrarFormulario(false);
+    setNombreEntidad("");
+    setTipoEntidad("PRODUCTO");
+    setDescripcion("");
+    setPreguntas([
+      {
+        id: "1",
+        texto: "¿Cuál es su nivel de satisfacción general?",
+        tipo: "ESTRELLAS",
+        obligatoria: true,
+        opciones: [],
+      },
+    ]);
+    setEditingEncuestaId(null);
+    setEsModoEdicion(false);
+    setActivo(true);
+    setModoFormulario("crear");
+    setNuevaOpcionPorPregunta({});
+    setError("");
+  }, []);
+
   // Actualizar encuesta
   const actualizarEncuesta = useCallback(async () => {
     if (!editingEncuestaId) return;
